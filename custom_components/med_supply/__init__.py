@@ -81,7 +81,9 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         )
 
     async def set_stock(call: ServiceCall) -> None:
-        await _supply(call).async_set_tablets(call.data[ATTR_TABLETS])
+        await _supply(call).async_set_tablets(
+            call.data[ATTR_TABLETS], call.data.get(ATTR_STRENGTH_MG)
+        )
 
     async def set_requested(call: ServiceCall) -> None:
         await _supply(call).async_set_requested(call.data[ATTR_REQUESTED])
@@ -110,7 +112,13 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         DOMAIN,
         SERVICE_SET_STOCK,
         set_stock,
-        vol.Schema({**_ENTRY, vol.Required(ATTR_TABLETS): _POSITIVE}),
+        vol.Schema(
+            {
+                **_ENTRY,
+                vol.Required(ATTR_TABLETS): _POSITIVE,
+                vol.Optional(ATTR_STRENGTH_MG): vol.All(vol.Coerce(float), vol.Range(min=0.001)),
+            }
+        ),
     )
     hass.services.async_register(
         DOMAIN,

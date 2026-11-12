@@ -1,7 +1,8 @@
 # The integration ships its own card and loads it automatically.
-# All medications:
+# One card per medication (side by side in a sections view):
 type: custom:med-supply-card
+entity: sensor.medikament_a_vorrat   # any entity of that medication
 
-# Optional:
+# Or all medications stacked in one card:
+# type: custom:med-supply-card
 # title: Medikamente
-# device_id: <device id>   # only one medication (Settings → Devices → URL)

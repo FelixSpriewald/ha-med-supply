@@ -13,7 +13,7 @@
         },
         "data_description": {
           "initial_tablets": "How many tablets do you have right now?",
-          "strength_mg": "Active ingredient per tablet, e.g. 5 mg.",
+          "strength_mg": "Active ingredient per tablet, e.g. 5 mg. Later packages may have a different strength.",
           "package_size": "Optional. Adds a \"+1 package\" button."
         },
         "sections": {
@@ -145,7 +145,7 @@
     },
     "set_stock": {
       "name": "Correct supply",
-      "description": "Set the supply after counting (tablets of the current strength).",
+      "description": "Set the supply after counting (replaces the whole supply with tablets of one strength).",
       "fields": {
         "config_entry_id": {
           "name": "Medication",
@@ -154,6 +154,10 @@
         "tablets": {
           "name": "Tablets",
           "description": "Counted tablets."
+        },
+        "strength_mg": {
+          "name": "Strength",
+          "description": "Strength of the counted tablets. Empty = current strength."
         }
       }
     },
@@ -192,7 +196,7 @@
           "package_size": "Package size"
         },
         "data_description": {
-          "strength_mg": "Changing the strength converts the supply (tracked in mg) to the new strength.",
+          "strength_mg": "Default strength for bookings. Existing supply keeps its strength; the strength being used up is shown.",
           "package_size": "Optional. Adds a \"+1 package\" button."
         },
         "sections": {

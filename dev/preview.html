@@ -26,7 +26,8 @@
   body { margin: 0; padding: 24px 16px; background: var(--primary-background-color, #fafafa); font-family: Roboto, system-ui, sans-serif; }
   :root[data-theme="dark"] body { background: #111; }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) body { background: #111; } }
-  .wrap { max-width: 520px; margin: 0 auto; display: grid; gap: 16px; }
+  .wrap { max-width: 1040px; margin: 0 auto; display: grid; gap: 16px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; align-items: start; }
   .bar { display: flex; gap: 8px; justify-content: flex-end; }
   .bar button { font: inherit; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--divider-color); background: var(--card-background-color); color: var(--primary-text-color); cursor: pointer; }
   #log { font: 12px ui-monospace, monospace; color: var(--secondary-text-color); white-space: pre-wrap; }
@@ -38,7 +39,7 @@
     <button onclick="document.documentElement.dataset.theme='light'">Hell</button>
     <button onclick="document.documentElement.dataset.theme='dark'">Dunkel</button>
   </div>
-  <med-supply-card id="card"></med-supply-card>
+  <div class="grid" id="grid"></div>
   <div id="log"></div>
 </div>
 <script src="../custom_components/med_supply/frontend/med-supply-card.js"></script>
@@ -55,6 +56,12 @@
     { dev: "d2", slug: "medikament_b", name: "Medikament B", tablets: 42.5, strength: 10, pack: 100, days: 85, lead: 14,
       status: "ok", requested: false, dose: 5,
       slots: { morning: { time: "08:00", dose_mg: 5, tablets: 0.5 } } },
+    { dev: "d3", slug: "medikament_c", name: "Medikament C", tablets: 36, strength: 5, pack: 50, days: 33, lead: 14,
+      status: "ok", requested: false, dose: 10, lots: [{ strength_mg: 5, tablets: 6 }, { strength_mg: 10, tablets: 30 }], booking: 10,
+      slots: { morning: { time: "08:00", dose_mg: 10, tablets: 2 } } },
+    { dev: "d4", slug: "medikament_d", name: "Medikament D", tablets: 12, strength: 1000, pack: 100, days: 6, lead: 14,
+      status: "requested", requested: true, dose: 2000,
+      slots: { morning: { time: "08:00", dose_mg: 1000, tablets: 1 }, evening: { time: "20:00", dose_mg: 1000, tablets: 1 } } },
   ];
 
   const states = {}, entities = {}, devices = {};
@@ -65,7 +72,9 @@
   };
   for (const m of meds) {
     devices[m.dev] = { id: m.dev, name: m.name };
-    add("sensor", m, "stock", m.tablets, { stock_mg: m.tablets * m.strength, strength_mg: m.strength, package_size: m.pack });
+    add("sensor", m, "stock", m.tablets, { stock_mg: m.tablets * m.strength, strength_mg: m.strength, package_size: m.pack,
+      booking_strength_mg: m.booking ?? m.strength, config_entry_id: "entry_" + m.dev,
+      lots: m.lots ?? [{ strength_mg: m.strength, tablets: m.tablets }] });
     add("sensor", m, "days_left", m.days, { lead_days: m.lead });
     add("sensor", m, "empty_on", iso(plus(m.days)));
     add("sensor", m, "prescription_due", iso(plus(m.days - m.lead)));
@@ -81,7 +90,13 @@
   }
 
   const log = (msg) => { document.getElementById("log").textContent = msg + "\n" + document.getElementById("log").textContent; };
-  const card = document.getElementById("card");
+  const cards = meds.map((m) => {
+    const c = document.createElement("med-supply-card");
+    c.setConfig({ entity: `sensor.${m.slug}_stock` });
+    c.addEventListener("hass-notification", (e) => log("Toast: " + e.detail.message));
+    document.getElementById("grid").appendChild(c);
+    return c;
+  });
   const hass = {
     states, entities, devices,
     callService: async (domain, service, data) => {
@@ -93,13 +108,11 @@
         states[data.entity_id] = { ...s, state: on ? "on" : "off", last_updated: Date.now() };
         const sid = `sensor.${m.slug}_status`;
         states[sid] = { ...states[sid], state: on ? "requested" : m.status, last_updated: Date.now() };
-        card.hass = { ...hass, states: { ...states } };
+        cards.forEach((c) => (c.hass = { ...hass, states: { ...states } }));
       }
     },
   };
-  card.addEventListener("hass-notification", (e) => log("Toast: " + e.detail.message));
-  card.setConfig({});
-  card.hass = hass;
+  cards.forEach((c) => (c.hass = hass));
 </script>
 </body>
 </html>

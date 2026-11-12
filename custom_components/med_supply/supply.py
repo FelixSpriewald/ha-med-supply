@@ -43,9 +43,11 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-KEY_BASE_MG = "base_mg"
+KEY_BASE_MG = "base_mg"  # v0.1/0.2 storage, migrated to KEY_LOTS
+KEY_LOTS = "lots"
 KEY_BASE_TS = "base_ts"
 KEY_REQUESTED = "requested"
+KEY_LAST_STRENGTH = "last_strength_mg"
 
 
 @dataclass(frozen=True)
@@ -54,6 +56,9 @@ class Snapshot:
 
     stock_mg: float
     stock_tablets: float
+    lots: list[calc.Lot]
+    strength_mg: float
+    """Strength currently being used up (oldest lot), shown in the plan."""
     daily_dose_mg: float
     days_left: int | None
     empty_at: datetime | None
@@ -94,8 +99,20 @@ class MedSupply:
         return self.entry.data[CONF_NAME]
 
     @property
-    def strength_mg(self) -> float:
+    def default_strength_mg(self) -> float:
         return float(self.entry.options[CONF_STRENGTH_MG])
+
+    @property
+    def booking_strength_mg(self) -> float:
+        """Default strength for the next booking: the last one booked."""
+        return float(self._data.get(KEY_LAST_STRENGTH) or self.default_strength_mg)
+
+    @property
+    def strength_mg(self) -> float:
+        """Strength currently being used up."""
+        if self.snapshot is not None:
+            return self.snapshot.strength_mg
+        return self.default_strength_mg
 
     @property
     def package_size(self) -> float:
@@ -160,11 +177,17 @@ class MedSupply:
         data = await self._store.async_load()
         if data is None:
             initial = float(self.entry.data.get(CONF_INITIAL_TABLETS) or 0)
+            strength = self.default_strength_mg
             data = {
-                KEY_BASE_MG: initial * self.strength_mg,
+                KEY_LOTS: [{"strength_mg": strength, "mg": initial * strength}] if initial else [],
                 KEY_BASE_TS: dt_util.now().isoformat(),
                 KEY_REQUESTED: False,
             }
+            await self._store.async_save(data)
+        if KEY_LOTS not in data:  # migrate single-strength storage
+            base_mg = float(data.pop(KEY_BASE_MG, 0) or 0)
+            strength = self.default_strength_mg
+            data[KEY_LOTS] = [{"strength_mg": strength, "mg": base_mg}] if base_mg > 0 else []
             await self._store.async_save(data)
         self._data = data
         self._recompute()
@@ -235,23 +258,35 @@ class MedSupply:
 
     # -------------------------------------------------------------- the math
 
-    def _current_mg(self, now: datetime) -> float:
+    def _base_lots(self) -> list[calc.Lot]:
+        return [calc.Lot(float(x["strength_mg"]), float(x["mg"])) for x in self._data[KEY_LOTS]]
+
+    def _store_lots(self, lots: list[calc.Lot], now: datetime) -> None:
+        self._data[KEY_LOTS] = [{"strength_mg": lot.strength_mg, "mg": lot.mg} for lot in lots]
+        self._data[KEY_BASE_TS] = now.isoformat()
+
+    def _current_lots(self, now: datetime) -> list[calc.Lot]:
         base_ts = dt_util.parse_datetime(self._data[KEY_BASE_TS])
         assert base_ts is not None
-        return calc.current_mg(
-            float(self._data[KEY_BASE_MG]), base_ts, self.slots, now, self._tz
-        )
+        lots = self._base_lots()
+        if now <= base_ts:
+            return lots
+        return calc.consume_fifo(lots, calc.consumed_mg(self.slots, base_ts, now, self._tz))
 
     @callback
     def _recompute(self) -> None:
         now = dt_util.now()
         slots = self.slots
-        stock_mg = self._current_mg(now)
+        lots = self._current_lots(now)
+        stock_mg = calc.total_mg(lots)
+        strength = lots[0].strength_mg if lots else self.booking_strength_mg
         projection = calc.project(stock_mg, slots, now, self._tz)
         next_intake = next(iter(calc.iter_intakes(slots, now, self._tz)), None)
         self.snapshot = Snapshot(
             stock_mg=stock_mg,
-            stock_tablets=calc.tablets(stock_mg, self.strength_mg),
+            stock_tablets=sum(lot.tablets for lot in lots),
+            lots=lots,
+            strength_mg=strength,
             daily_dose_mg=calc.daily_dose_mg(slots),
             days_left=projection.days_left,
             empty_at=projection.empty_at,
@@ -270,8 +305,7 @@ class MedSupply:
     async def async_rebase(self) -> None:
         """Freeze the current supply as new base (call before changing the plan)."""
         now = dt_util.now()
-        self._data[KEY_BASE_MG] = self._current_mg(now)
-        self._data[KEY_BASE_TS] = now.isoformat()
+        self._store_lots(self._current_lots(now), now)
         await self._store.async_save(self._data)
 
     def _clear_request_if_covered(self) -> None:
@@ -284,17 +318,18 @@ class MedSupply:
     async def async_add_tablets(self, tablets: float, strength_mg: float | None = None) -> None:
         """Book an addition (new package). Clears a pending prescription request."""
         now = dt_util.now()
-        strength = strength_mg or self.strength_mg
-        self._data[KEY_BASE_MG] = self._current_mg(now) + tablets * strength
-        self._data[KEY_BASE_TS] = now.isoformat()
+        strength = strength_mg or self.booking_strength_mg
+        self._store_lots(calc.add_lot(self._current_lots(now), strength, tablets * strength), now)
+        self._data[KEY_LAST_STRENGTH] = strength
         self._data[KEY_REQUESTED] = False
         self._cancel_snooze()
         await self._async_save_and_update()
 
-    async def async_set_tablets(self, tablets: float) -> None:
-        """Correct the supply after counting (tablets of the current strength)."""
-        self._data[KEY_BASE_MG] = tablets * self.strength_mg
-        self._data[KEY_BASE_TS] = dt_util.now().isoformat()
+    async def async_set_tablets(self, tablets: float, strength_mg: float | None = None) -> None:
+        """Correct the supply after counting: replaces everything with one strength."""
+        strength = strength_mg or self.strength_mg
+        self._store_lots(calc.add_lot([], strength, tablets * strength), dt_util.now())
+        self._data[KEY_LAST_STRENGTH] = strength
         self._clear_request_if_covered()
         await self._async_save_and_update()
 

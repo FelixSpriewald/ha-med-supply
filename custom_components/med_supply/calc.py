@@ -110,6 +110,47 @@ def prescription_due(empty_at: datetime | None, lead_days: int) -> date | None:
     return empty_at.date() - timedelta(days=lead_days)
 
 
+@dataclass(frozen=True)
+class Lot:
+    """Tablets of one strength, in booking order (oldest first)."""
+
+    strength_mg: float
+    mg: float
+
+    @property
+    def tablets(self) -> float:
+        return self.mg / self.strength_mg
+
+
+def consume_fifo(lots: Sequence[Lot], amount_mg: float) -> list[Lot]:
+    """Take `amount_mg` from the oldest lots first; drop lots that are used up."""
+    remaining = amount_mg
+    result: list[Lot] = []
+    for lot in lots:
+        if remaining <= EPSILON:
+            result.append(lot)
+            continue
+        taken = min(lot.mg, remaining)
+        remaining -= taken
+        if lot.mg - taken > EPSILON:
+            result.append(Lot(lot.strength_mg, lot.mg - taken))
+    return result
+
+
+def add_lot(lots: Sequence[Lot], strength_mg: float, mg: float) -> list[Lot]:
+    """Append tablets; merge into the newest lot if it has the same strength."""
+    result = list(lots)
+    if result and abs(result[-1].strength_mg - strength_mg) < EPSILON:
+        result[-1] = Lot(strength_mg, result[-1].mg + mg)
+    elif mg > EPSILON:
+        result.append(Lot(strength_mg, mg))
+    return result
+
+
+def total_mg(lots: Sequence[Lot]) -> float:
+    return sum(lot.mg for lot in lots)
+
+
 def tablets(dose_mg: float, strength_mg: float) -> float:
     """Number of tablets of the given strength for a dose."""
     return dose_mg / strength_mg

@@ -43,7 +43,13 @@ SENSORS: tuple[MedSupplySensorDescription, ...] = (
         attrs_fn=lambda s: {
             "stock_mg": round(_snap(s).stock_mg, 3),
             "strength_mg": s.strength_mg,
+            "booking_strength_mg": s.booking_strength_mg,
+            "lots": [
+                {"strength_mg": lot.strength_mg, "tablets": round(lot.tablets, 2)}
+                for lot in _snap(s).lots
+            ],
             "package_size": s.package_size or None,
+            "config_entry_id": s.entry.entry_id,
         },
     ),
     MedSupplySensorDescription(

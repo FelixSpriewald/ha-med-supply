@@ -39,6 +39,14 @@ set_stock:
           step: 0.5
           mode: box
           unit_of_measurement: Tbl.
+    strength_mg:
+      selector:
+        number:
+          min: 0
+          max: 10000
+          step: any
+          mode: box
+          unit_of_measurement: mg
 
 set_requested:
   fields:

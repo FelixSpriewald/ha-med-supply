@@ -166,8 +166,15 @@ async def test_services(hass: HomeAssistant, setup) -> None:
         {"config_entry_id": entry.entry_id, "tablets": 10, "strength_mg": 10},
         blocking=True,
     )
-    # 155 mg + 100 mg = 255 mg = 51 tablets à 5 mg
-    assert float(state(hass, entry, "sensor", "stock").state) == 51
+    # 31× 5 mg stay, 10× 10 mg are a separate lot: 41 tablets, 255 mg
+    stock = state(hass, entry, "sensor", "stock")
+    assert float(stock.state) == 41
+    assert stock.attributes["stock_mg"] == 255
+    assert stock.attributes["lots"] == [
+        {"strength_mg": 5, "tablets": 31},
+        {"strength_mg": 10, "tablets": 10},
+    ]
+    assert stock.attributes["booking_strength_mg"] == 10
     await hass.services.async_call(
         DOMAIN, "set_stock", {"config_entry_id": entry.entry_id, "tablets": 4}, blocking=True
     )
@@ -185,7 +192,7 @@ async def test_options_change_rebases(
     await tick(hass, freezer, START.replace(hour=20, minute=0, second=1))
     assert float(state(hass, entry, "sensor", "stock").state) == 29
 
-    # New plan: only 5 mg in the morning, and 10 mg tablets now.
+    # New plan: only 5 mg in the morning, and 10 mg as default strength for bookings.
     options = {k: v for k, v in USER_INPUT.items() if k not in ("name", "initial_tablets")}
     options = {
         **options,
@@ -197,11 +204,11 @@ async def test_options_change_rebases(
     assert result["type"] is FlowResultType.CREATE_ENTRY
     await hass.async_block_till_done()
 
-    # 145 mg left, now shown as 14.5 tablets à 10 mg; 5 mg/day → 29 intakes
+    # The 29× 5 mg on hand keep their strength; 5 mg/day → 29 intakes
     # (13.11. … 11.12.), empty on 12.12. = 30 days from 12.11.
-    assert float(state(hass, entry, "sensor", "stock").state) == 14.5
+    assert float(state(hass, entry, "sensor", "stock").state) == 29
     assert state(hass, entry, "sensor", "daily_dose").attributes["plan"] == (
-        "morgens 5 mg (0,5× 10 mg)"
+        "morgens 5 mg (1× 5 mg)"
     )
     assert state(hass, entry, "sensor", "empty_on").state == "2026-12-12"
     assert state(hass, entry, "sensor", "days_left").state == "30"
@@ -284,3 +291,66 @@ async def test_card_is_served_and_registered(hass: HomeAssistant, hass_client) -
     resp = await client.get("/med_supply/med-supply-card.js")
     assert resp.status == 200
     assert 'customElements.define("med-supply-card"' in await resp.text()
+
+
+async def test_switch_strength_uses_old_tablets_first(
+    hass: HomeAssistant, setup, freezer: FrozenDateTimeFactory
+) -> None:
+    """5 mg → 10 mg: leftovers are used up first, then the plan shows 1× 10 mg."""
+    entry, _ = setup
+    await hass.services.async_call(
+        DOMAIN, "set_stock", {"config_entry_id": entry.entry_id, "tablets": 6}, blocking=True
+    )
+    await hass.services.async_call(
+        DOMAIN,
+        "add_stock",
+        {"config_entry_id": entry.entry_id, "tablets": 30, "strength_mg": 10},
+        blocking=True,
+    )
+    stock = state(hass, entry, "sensor", "stock")
+    assert float(stock.state) == 36
+    assert stock.attributes["strength_mg"] == 5
+    assert state(hass, entry, "sensor", "daily_dose").attributes["evening"]["tablets"] == 2
+
+    # 12.11. 20:00 + 13.11. 08:00/20:00 = 30 mg → all 5 mg tablets gone.
+    await tick(hass, freezer, START + timedelta(days=1, hours=10, seconds=1))
+    stock = state(hass, entry, "sensor", "stock")
+    assert stock.attributes["lots"] == [{"strength_mg": 10, "tablets": 30}]
+    assert stock.attributes["strength_mg"] == 10
+    dose = state(hass, entry, "sensor", "daily_dose")
+    assert dose.attributes["plan"] == "morgens 10 mg (1× 10 mg), abends 10 mg (1× 10 mg)"
+
+    # Counting with a strength replaces the whole supply.
+    await hass.services.async_call(
+        DOMAIN,
+        "set_stock",
+        {"config_entry_id": entry.entry_id, "tablets": 20, "strength_mg": 10},
+        blocking=True,
+    )
+    assert state(hass, entry, "sensor", "stock").attributes["lots"] == [
+        {"strength_mg": 10, "tablets": 20}
+    ]
+
+
+async def test_migrates_single_strength_storage(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory, hass_storage
+) -> None:
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+    await hass.config.async_set_time_zone("Europe/Berlin")
+    freezer.move_to(START)
+    options = {k: v for k, v in USER_INPUT.items() if k not in ("name", "initial_tablets")}
+    entry = MockConfigEntry(
+        domain=DOMAIN, title="Alt", data={"name": "Alt", "initial_tablets": 0}, options=options
+    )
+    entry.add_to_hass(hass)
+    hass_storage[f"{DOMAIN}.{entry.entry_id}"] = {
+        "version": 1,
+        "key": f"{DOMAIN}.{entry.entry_id}",
+        "data": {"base_mg": 100.0, "base_ts": START.isoformat(), "requested": False},
+    }
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    stock = state(hass, entry, "sensor", "stock")
+    assert float(stock.state) == 20
+    assert stock.attributes["lots"] == [{"strength_mg": 5, "tablets": 20}]

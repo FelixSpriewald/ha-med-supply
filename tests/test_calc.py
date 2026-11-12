@@ -91,3 +91,13 @@ def test_formatting():
     assert calc.format_count(2.0) == "2"
     assert calc.format_count(1.5) == "1,5"
     assert calc.format_mg(2.5) == "2,5 mg"
+
+
+def test_fifo_lots():
+    lots = [calc.Lot(5, 30.0), calc.Lot(10, 300.0)]
+    assert calc.consume_fifo(lots, 20) == [calc.Lot(5, 10.0), calc.Lot(10, 300.0)]
+    assert calc.consume_fifo(lots, 40) == [calc.Lot(10, 290.0)]
+    assert calc.consume_fifo(lots, 1000) == []
+    assert calc.add_lot([calc.Lot(5, 10.0)], 5, 50) == [calc.Lot(5, 60.0)]
+    assert calc.add_lot([calc.Lot(5, 10.0)], 10, 50) == [calc.Lot(5, 10.0), calc.Lot(10, 50.0)]
+    assert calc.add_lot([], 10, 0) == []

@@ -12,8 +12,9 @@ Alles andere rechnet die Integration.
 
 ## Wie gerechnet wird
 
-- Vorrat wird intern in **mg** geführt. Dadurch funktionieren Dosis ≠ Tablettenstärke
-  (10 mg = 2× 5 mg), Stärkewechsel und gemischte Packungen.
+- Vorrat wird intern in **mg** und **getrennt nach Tablettenstärke** geführt. Dadurch funktionieren
+  Dosis ≠ Tablettenstärke (10 mg = 2× 5 mg) und Stärkewechsel: bei 6× 5 mg Rest + 30× 10 mg Zugang
+  werden zuerst die 5-mg-Tabletten verbraucht (Plan zeigt „2× 5 mg"), danach „1× 10 mg".
 - Gespeichert wird nur ein Stand (mg + Zeitpunkt). Der aktuelle Vorrat = Stand minus alle
   Plan-Einnahmen seitdem — stimmt also auch nach Neustart oder Ausfall.
 - Planänderung: Beim Speichern wird der Verbrauch nach altem Plan festgeschrieben, der neue
@@ -25,7 +26,7 @@ Alles andere rechnet die Integration.
 
 | Entität | |
 |---|---|
-| `sensor.*_vorrat` | Tabletten (Attribute: `stock_mg`, `strength_mg`) |
+| `sensor.*_vorrat` | Tabletten (Attribute: `stock_mg`, `strength_mg` = Stärke im Verbrauch, `lots`, `booking_strength_mg`, `config_entry_id`) |
 | `sensor.*_reichweite` | Tage bis leer |
 | `sensor.*_leer_am`, `sensor.*_rezept_bis` | Datum |
 | `sensor.*_status` | `ok` / `due` / `requested` / `empty` |
@@ -68,9 +69,17 @@ nicht eingetragen werden. Im Dashboard: *Karte hinzufügen* → „Medikamentenv
 type: custom:med-supply-card
 ```
 
-Ohne Konfiguration zeigt sie alle Medikamente. Optional `title` und `device_id`.
-Sie zeigt Reichweite als Balken mit Vorlauf-Markierung, Status, Leer-Datum, den Einnahmeplan
-mit Tabletten-Symbolen und Buttons für *+ Packung*, *Zugang…*, *Gezählt…* und *Rezept angefragt*.
+Ohne Konfiguration zeigt sie alle Medikamente untereinander. Eine Karte pro Medikament (im
+Sections-Dashboard dann nebeneinander):
+
+```yaml
+type: custom:med-supply-card
+entity: sensor.medikament_a_vorrat   # irgendeine Entität des Medikaments
+```
+
+Sie zeigt Reichweite als Balken mit Vorlauf-Markierung, Status, Vorrat je Stärke, Leer-Datum, den
+Einnahmeplan mit Tabletten-Symbolen und Buttons für *Zugang…* / *Gezählt…* (Anzahl + Stärke in mg,
+über `med_supply.add_stock` / `set_stock`) und *Rezept angefragt*.
 
 Lokale Vorschau mit Beispieldaten: `python3 -m http.server` im Repo, dann
 `http://localhost:8000/dev/preview.html`.

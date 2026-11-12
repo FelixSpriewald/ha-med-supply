@@ -2,7 +2,9 @@
  * med-supply-card — dashboard card for the Medication Supply integration.
  *
  * Zero config: `type: custom:med-supply-card` shows every medication.
- * Optional: `device_id: <id>` (one medication), `title: <text>`.
+ * Optional: `entity: sensor.<name>_vorrat` (any entity of one medication → only
+ * that one; one card per medication lets the dashboard place them side by
+ * side), `title: <text>`.
  *
  * No external dependencies (no Lit, no icon font) so it works offline and in
  * the standalone preview (dev/preview.html).
@@ -122,9 +124,11 @@ class MedSupplyCard extends HTMLElement {
     const hass = this._hass;
     if (!hass || !hass.entities) return [];
     const byDevice = {};
+    const only =
+      this._config?.device_id || (this._config?.entity && hass.entities[this._config.entity]?.device_id);
     for (const ent of Object.values(hass.entities)) {
       if (ent.platform !== "med_supply" || !ent.device_id || !ent.translation_key) continue;
-      if (this._config?.device_id && ent.device_id !== this._config.device_id) continue;
+      if (only && ent.device_id !== only) continue;
       (byDevice[ent.device_id] ||= {})[ent.translation_key] = ent.entity_id;
     }
     return Object.entries(byDevice)
@@ -166,7 +170,12 @@ class MedSupplyCard extends HTMLElement {
     const st = STATUS[status] || STATUS.ok;
     const tablets = Number(stock.state);
     const strength = stock.attributes.strength_mg;
-    const pack = stock.attributes.package_size;
+    const bookingStrength = stock.attributes.booking_strength_mg ?? strength;
+    const lots = stock.attributes.lots || [];
+    const stockText =
+      lots.length > 1
+        ? lots.map((l) => `<div class="nowrap"><b>${fmtNum(l.tablets, 1)}</b> Tbl. à ${fmtNum(l.strength_mg)} mg</div>`).join("")
+        : `<div class="nowrap"><b>${fmtNum(tablets, 1)}</b> Tbl. à ${fmtNum(strength)} mg</div>`;
     const lead = Number(days.attributes.lead_days ?? 14);
     const daysLeft = days.state === "unknown" ? null : Number(days.state);
     const emptyOn = parseDate(this._st(e.empty_on)?.state);
@@ -196,15 +205,25 @@ class MedSupplyCard extends HTMLElement {
     }).join("");
 
     const k = (kind) => `${deviceId}:${kind}`;
-    const inputRow = (kind, label, placeholder) => {
+    const inputRow = (kind, label, mgDefault, note) => {
       if (!this._open[k(kind)]) return "";
-      const val = this._drafts[k(kind)] ?? placeholder ?? "";
-      return `<div class="input-row">
-          <label>${label}</label>
-          <input type="number" inputmode="decimal" min="0" step="0.5" data-input="${kind}" data-dev="${deviceId}" value="${esc(val)}">
-          <span class="unit">Tbl.</span>
-          <button class="primary" data-act="book-${kind}" data-dev="${deviceId}">Buchen</button>
-          <button class="ghost-btn" data-act="close-${kind}" data-dev="${deviceId}" aria-label="Abbrechen">✕</button>
+      const val = this._drafts[k(kind)] ?? "";
+      const mg = this._drafts[k(kind) + ":mg"] ?? mgDefault;
+      return `<div class="input-panel">
+          <div class="panel-title">${label}</div>
+          <div class="fields">
+            <label class="field"><span class="field-label">Anzahl</span>
+              <span class="with-unit"><input type="number" inputmode="decimal" min="0" step="0.5" data-input="${kind}" data-dev="${deviceId}" value="${esc(val)}"><span class="unit">Tbl.</span></span>
+            </label>
+            <label class="field"><span class="field-label">Stärke</span>
+              <span class="with-unit"><input type="number" inputmode="decimal" min="0" step="any" data-input-mg="${kind}" data-dev="${deviceId}" value="${esc(mg)}"><span class="unit">mg</span></span>
+            </label>
+          </div>
+          <div class="note">${note}</div>
+          <div class="panel-actions">
+            <button class="ghost-btn" data-act="close-${kind}" data-dev="${deviceId}">Abbrechen</button>
+            <button class="primary" data-act="book-${kind}" data-dev="${deviceId}">Buchen</button>
+          </div>
         </div>`;
     };
 
@@ -218,7 +237,7 @@ class MedSupplyCard extends HTMLElement {
       <div class="numbers">
         <div class="big"><span class="value">${daysLeft == null ? "–" : daysLeft}</span><span class="label">${daysLeft === 1 ? "Tag" : "Tage"}</span></div>
         <div class="facts">
-          <div><b>${fmtNum(tablets, 1)}</b> Tbl. à ${fmtNum(strength)} mg</div>
+          ${stockText}
           <div>${emptyOn ? `leer am <b>${fmtDate(emptyOn)}</b>` : "&nbsp;"}</div>
         </div>
       </div>
@@ -233,20 +252,27 @@ class MedSupplyCard extends HTMLElement {
       <div class="meta">${fmtNum(dose.state)} mg/Tag${next ? ` · nächste Einnahme ${next}` : ""}</div>
 
       <div class="actions">
-        ${e.add_package && pack ? `<button data-act="package" data-dev="${deviceId}">+ Packung (${fmtNum(pack)})</button>` : ""}
         <button data-act="open-addition" data-dev="${deviceId}" class="${this._open[k("addition")] ? "active" : ""}">Zugang…</button>
         <button data-act="open-counted" data-dev="${deviceId}" class="${this._open[k("counted")] ? "active" : ""}">Gezählt…</button>
         ${status !== "ok" || requested ? `<button data-act="requested" data-dev="${deviceId}" class="toggle ${requested ? "on" : ""}" aria-pressed="${requested}">
           ${requested ? "✓ " : ""}Rezept angefragt
         </button>` : ""}
       </div>
-      ${inputRow("addition", "Zugang", pack || "")}
-      ${inputRow("counted", "Gezählt", "")}
+      ${inputRow("addition", "Zugang buchen", bookingStrength, "Wird zum Vorrat addiert. Ältere Tabletten werden zuerst verbraucht.")}
+      ${inputRow("counted", "Gezählten Vorrat setzen", strength, "Ersetzt den gesamten Vorrat.")}
     </div>`;
   }
 
   _bind(meds) {
     const byId = Object.fromEntries(meds.map((m) => [m.deviceId, m]));
+    this.shadowRoot.querySelectorAll("input[data-input-mg]").forEach((input) => {
+      input.addEventListener("input", () => {
+        this._drafts[`${input.dataset.dev}:${input.dataset.inputMg}:mg`] = input.value;
+      });
+      input.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") this._act(`book-${input.dataset.inputMg}`, byId[input.dataset.dev]);
+      });
+    });
     this.shadowRoot.querySelectorAll("input[data-input]").forEach((input) => {
       input.addEventListener("input", () => {
         this._drafts[`${input.dataset.dev}:${input.dataset.input}`] = input.value;
@@ -272,10 +298,7 @@ class MedSupplyCard extends HTMLElement {
     const { e, deviceId } = med;
     const call = (domain, service, data) => this._hass.callService(domain, service, data);
     try {
-      if (act === "package") {
-        await call("button", "press", { entity_id: e.add_package });
-        this._toast("Packung gebucht");
-      } else if (act === "requested") {
+      if (act === "requested") {
         await call("switch", "toggle", { entity_id: e.requested });
       } else if (act.startsWith("open-")) {
         const kind = act.slice(5);
@@ -292,18 +315,33 @@ class MedSupplyCard extends HTMLElement {
       } else if (act.startsWith("book-")) {
         const kind = act.slice(5);
         const key = `${deviceId}:${kind}`;
-        const input = this.shadowRoot.querySelector(`input[data-input="${kind}"][data-dev="${deviceId}"]`);
-        const value = Number(String(input?.value ?? "").replace(",", "."));
+        const num = (sel) =>
+          Number(String(this.shadowRoot.querySelector(sel)?.value ?? "").replace(",", "."));
+        const value = num(`input[data-input="${kind}"][data-dev="${deviceId}"]`);
+        const mg = num(`input[data-input-mg="${kind}"][data-dev="${deviceId}"]`);
         if (!Number.isFinite(value) || value < 0 || (kind === "addition" && value === 0)) {
           this._toast("Bitte eine gültige Anzahl eintragen");
           return;
         }
-        await call("number", "set_value", { entity_id: e[kind], value });
-        await call("button", "press", { entity_id: kind === "addition" ? e.book_addition : e.book_count });
+        if (!Number.isFinite(mg) || mg <= 0) {
+          this._toast("Bitte die Stärke in mg eintragen");
+          return;
+        }
+        const entryId = this._st(e.stock)?.attributes.config_entry_id;
+        await call("med_supply", kind === "addition" ? "add_stock" : "set_stock", {
+          config_entry_id: entryId,
+          tablets: value,
+          strength_mg: mg,
+        });
         this._open[key] = false;
         delete this._drafts[key];
+        delete this._drafts[key + ":mg"];
         this._render();
-        this._toast(kind === "addition" ? `${fmtNum(value)} Tbl. gebucht` : `Vorrat auf ${fmtNum(value)} Tbl. gesetzt`);
+        this._toast(
+          kind === "addition"
+            ? `${fmtNum(value)} Tbl. à ${fmtNum(mg)} mg gebucht`
+            : `Vorrat auf ${fmtNum(value)} Tbl. à ${fmtNum(mg)} mg gesetzt`
+        );
       }
     } catch (err) {
       this._toast(err?.message || String(err));
@@ -392,10 +430,22 @@ const CSS = `
   button.primary { border-color: transparent; color: var(--text-primary-color, #fff); background: var(--primary-color, #03a9f4); }
   button.primary:hover { filter: brightness(1.08); }
   .ghost-btn { border-color: transparent; padding: 8px 10px; color: var(--secondary-text-color, #6b6b6b); }
-  .input-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
-  .input-row label { font-size: 0.875rem; color: var(--secondary-text-color, #6b6b6b); }
-  .input-row input {
-    font: inherit; width: 90px; padding: 8px 10px; border-radius: 8px;
+  .input-panel {
+    margin-top: 12px; padding: 12px; border-radius: 10px;
+    background: color-mix(in srgb, var(--secondary-text-color, #888) 8%, transparent);
+    display: grid; gap: 10px;
+  }
+  .panel-title { font-size: 0.9rem; font-weight: 500; }
+  .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .field { display: grid; gap: 4px; min-width: 0; }
+  .field-label { font-size: 0.75rem; color: var(--secondary-text-color, #6b6b6b); }
+  .with-unit { display: flex; align-items: center; gap: 6px; }
+  .with-unit input { flex: 1; min-width: 0; width: 100%; }
+  .note { font-size: 0.8rem; color: var(--secondary-text-color, #6b6b6b); }
+  .panel-actions { display: flex; justify-content: flex-end; gap: 8px; }
+  .nowrap { white-space: nowrap; }
+  .input-panel input {
+    font: inherit; padding: 8px 10px; border-radius: 8px; box-sizing: border-box;
     color: var(--primary-text-color, #1c1c1c);
     background: var(--input-fill-color, color-mix(in srgb, var(--secondary-text-color, #888) 10%, transparent));
     border: 1px solid var(--divider-color, #d0d0d0);
