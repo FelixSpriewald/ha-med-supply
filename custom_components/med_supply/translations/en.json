@@ -1,0 +1,234 @@
+{
+  "title": "Medication supply",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add medication",
+        "description": "Enter doses in mg; tablets per intake are derived. Dose 0 = slot unused.",
+        "data": {
+          "name": "Name",
+          "initial_tablets": "Current supply",
+          "strength_mg": "Tablet strength",
+          "package_size": "Package size"
+        },
+        "data_description": {
+          "initial_tablets": "How many tablets do you have right now?",
+          "strength_mg": "Active ingredient per tablet, e.g. 5 mg.",
+          "package_size": "Optional. Adds a \"+1 package\" button."
+        },
+        "sections": {
+          "plan": {
+            "name": "Intake plan",
+            "data": {
+              "morning_time": "Morning – time",
+              "morning_dose_mg": "Morning – dose",
+              "noon_time": "Noon – time",
+              "noon_dose_mg": "Noon – dose",
+              "evening_time": "Evening – time",
+              "evening_dose_mg": "Evening – dose",
+              "night_time": "Night – time",
+              "night_dose_mg": "Night – dose"
+            }
+          },
+          "reminder": {
+            "name": "Reminder",
+            "data": {
+              "lead_days": "Lead time",
+              "reminder_time": "Reminder time",
+              "notify_service": "Push to",
+              "show_name": "Show medication name in push"
+            },
+            "data_description": {
+              "lead_days": "Prescription is due when the supply lasts this many days or less.",
+              "notify_service": "Companion app device. Empty = no push.",
+              "show_name": "Off: the push only says \"A medication …\" (lock screen)."
+            }
+          }
+        }
+      }
+    },
+    "error": {
+      "strength_invalid": "Tablet strength must be greater than 0.",
+      "dose_not_divisible": "{slot}: {dose} cannot be taken with whole or half tablets of {strength}."
+    },
+    "abort": {
+      "already_configured": "A medication with this name already exists."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "stock": {
+        "name": "Supply"
+      },
+      "days_left": {
+        "name": "Days left"
+      },
+      "empty_on": {
+        "name": "Empty on"
+      },
+      "prescription_due": {
+        "name": "Prescription due"
+      },
+      "status": {
+        "name": "Status",
+        "state": {
+          "ok": "Sufficient",
+          "due": "Prescription due",
+          "requested": "Prescription requested",
+          "empty": "Empty"
+        }
+      },
+      "daily_dose": {
+        "name": "Daily dose"
+      },
+      "next_intake": {
+        "name": "Next intake"
+      }
+    },
+    "number": {
+      "addition": {
+        "name": "Addition"
+      },
+      "counted": {
+        "name": "Counted"
+      }
+    },
+    "button": {
+      "book_addition": {
+        "name": "Book addition"
+      },
+      "book_count": {
+        "name": "Apply count"
+      },
+      "add_package": {
+        "name": "+1 package"
+      }
+    },
+    "switch": {
+      "requested": {
+        "name": "Prescription requested"
+      }
+    }
+  },
+  "exceptions": {
+    "entry_not_loaded": {
+      "message": "Medication not found or not loaded."
+    },
+    "no_notify_service": {
+      "message": "No push target configured for this medication."
+    },
+    "addition_missing": {
+      "message": "Enter the number of tablets in \"Addition\" first."
+    },
+    "counted_missing": {
+      "message": "Enter the counted number in \"Counted\" first."
+    }
+  },
+  "services": {
+    "add_stock": {
+      "name": "Add stock",
+      "description": "Add tablets (new package). Clears \"prescription requested\".",
+      "fields": {
+        "config_entry_id": {
+          "name": "Medication",
+          "description": "The medication."
+        },
+        "tablets": {
+          "name": "Tablets",
+          "description": "Number of tablets."
+        },
+        "strength_mg": {
+          "name": "Strength",
+          "description": "Strength of these tablets. Empty = current strength."
+        }
+      }
+    },
+    "set_stock": {
+      "name": "Correct supply",
+      "description": "Set the supply after counting (tablets of the current strength).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Medication",
+          "description": "The medication."
+        },
+        "tablets": {
+          "name": "Tablets",
+          "description": "Counted tablets."
+        }
+      }
+    },
+    "set_requested": {
+      "name": "Set prescription requested",
+      "description": "Mark the prescription as requested (stops the reminder) or undo.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Medication",
+          "description": "The medication."
+        },
+        "requested": {
+          "name": "Requested",
+          "description": "On = requested."
+        }
+      }
+    },
+    "send_reminder": {
+      "name": "Send reminder",
+      "description": "Send the push matching the current status right away (for testing).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Medication",
+          "description": "The medication."
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Edit medication",
+        "description": "Saving freezes consumption so far — the new plan applies from now on.",
+        "data": {
+          "strength_mg": "Tablet strength",
+          "package_size": "Package size"
+        },
+        "data_description": {
+          "strength_mg": "Changing the strength converts the supply (tracked in mg) to the new strength.",
+          "package_size": "Optional. Adds a \"+1 package\" button."
+        },
+        "sections": {
+          "plan": {
+            "name": "Intake plan",
+            "data": {
+              "morning_time": "Morning – time",
+              "morning_dose_mg": "Morning – dose",
+              "noon_time": "Noon – time",
+              "noon_dose_mg": "Noon – dose",
+              "evening_time": "Evening – time",
+              "evening_dose_mg": "Evening – dose",
+              "night_time": "Night – time",
+              "night_dose_mg": "Night – dose"
+            }
+          },
+          "reminder": {
+            "name": "Reminder",
+            "data": {
+              "lead_days": "Lead time",
+              "reminder_time": "Reminder time",
+              "notify_service": "Push to",
+              "show_name": "Show medication name in push"
+            },
+            "data_description": {
+              "lead_days": "Prescription is due when the supply lasts this many days or less.",
+              "notify_service": "Companion app device. Empty = no push.",
+              "show_name": "Off: the push only says \"A medication …\" (lock screen)."
+            }
+          }
+        }
+      }
+    },
+    "error": {
+      "strength_invalid": "Tablet strength must be greater than 0.",
+      "dose_not_divisible": "{slot}: {dose} cannot be taken with whole or half tablets of {strength}."
+    }
+  }
+}

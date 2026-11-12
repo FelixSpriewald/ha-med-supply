@@ -1,0 +1,178 @@
+{
+  "title": "Medikamentenvorrat",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Medikament hinzufügen",
+        "description": "Dosis im Plan in mg angeben. Die Integration rechnet daraus die Tabletten pro Einnahme. Dosis 0 = Zeitpunkt nicht genutzt.",
+        "data": {
+          "name": "Name",
+          "initial_tablets": "Aktueller Vorrat",
+          "strength_mg": "Tablettenstärke",
+          "package_size": "Packungsgröße"
+        },
+        "data_description": {
+          "initial_tablets": "Wie viele Tabletten hast du jetzt zu Hause?",
+          "strength_mg": "Wirkstoff pro Tablette, z. B. 5 mg.",
+          "package_size": "Optional. Erzeugt den Button „+1 Packung“."
+        },
+        "sections": {
+          "plan": {
+            "name": "Einnahmeplan",
+            "data": {
+              "morning_time": "Morgens – Uhrzeit",
+              "morning_dose_mg": "Morgens – Dosis",
+              "noon_time": "Mittags – Uhrzeit",
+              "noon_dose_mg": "Mittags – Dosis",
+              "evening_time": "Abends – Uhrzeit",
+              "evening_dose_mg": "Abends – Dosis",
+              "night_time": "Nachts – Uhrzeit",
+              "night_dose_mg": "Nachts – Dosis"
+            }
+          },
+          "reminder": {
+            "name": "Erinnerung",
+            "data": {
+              "lead_days": "Vorlaufzeit",
+              "reminder_time": "Uhrzeit der Erinnerung",
+              "notify_service": "Push an",
+              "show_name": "Medikamentenname im Push zeigen"
+            },
+            "data_description": {
+              "lead_days": "Ab so vielen Tagen Restreichweite gilt das Rezept als fällig.",
+              "notify_service": "Companion-App-Gerät. Leer = keine Pushs.",
+              "show_name": "Aus: Der Push sagt nur „Ein Medikament …“ (Sperrbildschirm)."
+            }
+          }
+        }
+      }
+    },
+    "error": {
+      "strength_invalid": "Die Tablettenstärke muss größer als 0 sein.",
+      "dose_not_divisible": "{slot}: {dose} lässt sich nicht mit ganzen oder halben Tabletten à {strength} abbilden."
+    },
+    "abort": {
+      "already_configured": "Ein Medikament mit diesem Namen gibt es schon."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Medikament bearbeiten",
+        "description": "Beim Speichern wird der bisherige Verbrauch festgeschrieben – der neue Plan gilt ab jetzt.",
+        "data": {
+          "strength_mg": "Tablettenstärke",
+          "package_size": "Packungsgröße"
+        },
+        "data_description": {
+          "strength_mg": "Wechselst du die Stärke, rechnet der Vorrat (in mg) auf die neue Stärke um.",
+          "package_size": "Optional. Erzeugt den Button „+1 Packung“."
+        },
+        "sections": {
+          "plan": {
+            "name": "Einnahmeplan",
+            "data": {
+              "morning_time": "Morgens – Uhrzeit",
+              "morning_dose_mg": "Morgens – Dosis",
+              "noon_time": "Mittags – Uhrzeit",
+              "noon_dose_mg": "Mittags – Dosis",
+              "evening_time": "Abends – Uhrzeit",
+              "evening_dose_mg": "Abends – Dosis",
+              "night_time": "Nachts – Uhrzeit",
+              "night_dose_mg": "Nachts – Dosis"
+            }
+          },
+          "reminder": {
+            "name": "Erinnerung",
+            "data": {
+              "lead_days": "Vorlaufzeit",
+              "reminder_time": "Uhrzeit der Erinnerung",
+              "notify_service": "Push an",
+              "show_name": "Medikamentenname im Push zeigen"
+            },
+            "data_description": {
+              "lead_days": "Ab so vielen Tagen Restreichweite gilt das Rezept als fällig.",
+              "notify_service": "Companion-App-Gerät. Leer = keine Pushs.",
+              "show_name": "Aus: Der Push sagt nur „Ein Medikament …“ (Sperrbildschirm)."
+            }
+          }
+        }
+      }
+    },
+    "error": {
+      "strength_invalid": "Die Tablettenstärke muss größer als 0 sein.",
+      "dose_not_divisible": "{slot}: {dose} lässt sich nicht mit ganzen oder halben Tabletten à {strength} abbilden."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "stock": { "name": "Vorrat" },
+      "days_left": { "name": "Reichweite" },
+      "empty_on": { "name": "Leer am" },
+      "prescription_due": { "name": "Rezept bis" },
+      "status": {
+        "name": "Status",
+        "state": {
+          "ok": "Ausreichend",
+          "due": "Rezept fällig",
+          "requested": "Rezept angefragt",
+          "empty": "Leer"
+        }
+      },
+      "daily_dose": { "name": "Tagesdosis" },
+      "next_intake": { "name": "Nächste Einnahme" }
+    },
+    "number": {
+      "addition": { "name": "Zugang" },
+      "counted": { "name": "Gezählt" }
+    },
+    "button": {
+      "book_addition": { "name": "Zugang buchen" },
+      "book_count": { "name": "Zählung übernehmen" },
+      "add_package": { "name": "+1 Packung" }
+    },
+    "switch": {
+      "requested": { "name": "Rezept angefragt" }
+    }
+  },
+  "exceptions": {
+    "entry_not_loaded": { "message": "Medikament nicht gefunden oder nicht geladen." },
+    "no_notify_service": { "message": "Für dieses Medikament ist kein Push-Ziel eingestellt." },
+    "addition_missing": { "message": "Erst im Feld „Zugang“ die Anzahl Tabletten eintragen." },
+    "counted_missing": { "message": "Erst im Feld „Gezählt“ die gezählte Anzahl eintragen." }
+  },
+  "services": {
+    "add_stock": {
+      "name": "Zugang buchen",
+      "description": "Tabletten zum Vorrat hinzufügen (neue Packung). Setzt „Rezept angefragt“ zurück.",
+      "fields": {
+        "config_entry_id": { "name": "Medikament", "description": "Das Medikament." },
+        "tablets": { "name": "Tabletten", "description": "Anzahl Tabletten." },
+        "strength_mg": { "name": "Stärke", "description": "Stärke dieser Tabletten. Leer = aktuelle Stärke." }
+      }
+    },
+    "set_stock": {
+      "name": "Vorrat korrigieren",
+      "description": "Vorrat nach dem Nachzählen auf eine Anzahl Tabletten (aktuelle Stärke) setzen.",
+      "fields": {
+        "config_entry_id": { "name": "Medikament", "description": "Das Medikament." },
+        "tablets": { "name": "Tabletten", "description": "Gezählte Anzahl Tabletten." }
+      }
+    },
+    "set_requested": {
+      "name": "Rezept angefragt setzen",
+      "description": "Markiert das Rezept als angefragt (stoppt die Rezept-Erinnerung) oder nimmt das zurück.",
+      "fields": {
+        "config_entry_id": { "name": "Medikament", "description": "Das Medikament." },
+        "requested": { "name": "Angefragt", "description": "An = angefragt." }
+      }
+    },
+    "send_reminder": {
+      "name": "Erinnerung senden",
+      "description": "Schickt sofort den Push, der zum aktuellen Status passt (zum Testen).",
+      "fields": {
+        "config_entry_id": { "name": "Medikament", "description": "Das Medikament." }
+      }
+    }
+  }
+}

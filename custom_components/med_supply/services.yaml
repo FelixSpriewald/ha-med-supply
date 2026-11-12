@@ -1,0 +1,61 @@
+add_stock:
+  fields:
+    config_entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: med_supply
+    tablets:
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 10000
+          step: 0.5
+          mode: box
+          unit_of_measurement: Tbl.
+    strength_mg:
+      selector:
+        number:
+          min: 0
+          max: 10000
+          step: any
+          mode: box
+          unit_of_measurement: mg
+
+set_stock:
+  fields:
+    config_entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: med_supply
+    tablets:
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 10000
+          step: 0.5
+          mode: box
+          unit_of_measurement: Tbl.
+
+set_requested:
+  fields:
+    config_entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: med_supply
+    requested:
+      default: true
+      selector:
+        boolean:
+
+send_reminder:
+  fields:
+    config_entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: med_supply

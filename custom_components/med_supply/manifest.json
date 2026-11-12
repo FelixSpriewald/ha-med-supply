@@ -1,0 +1,13 @@
+{
+  "domain": "med_supply",
+  "name": "Medication Supply",
+  "after_dependencies": ["mobile_app", "notify"],
+  "codeowners": ["@FelixSpriewald"],
+  "config_flow": true,
+  "documentation": "https://github.com/FelixSpriewald/ha-med-supply",
+  "integration_type": "service",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/FelixSpriewald/ha-med-supply/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}

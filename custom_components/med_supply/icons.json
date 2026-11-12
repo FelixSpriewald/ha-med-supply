@@ -1,0 +1,38 @@
+{
+  "entity": {
+    "sensor": {
+      "stock": { "default": "mdi:pill" },
+      "days_left": { "default": "mdi:calendar-clock" },
+      "empty_on": { "default": "mdi:calendar-remove" },
+      "prescription_due": { "default": "mdi:file-document-alert-outline" },
+      "status": {
+        "default": "mdi:check-circle-outline",
+        "state": {
+          "due": "mdi:alert-circle-outline",
+          "requested": "mdi:clock-outline",
+          "empty": "mdi:alert-octagon"
+        }
+      },
+      "daily_dose": { "default": "mdi:pill-multiple" },
+      "next_intake": { "default": "mdi:clock-time-eight-outline" }
+    },
+    "number": {
+      "addition": { "default": "mdi:plus-box-outline" },
+      "counted": { "default": "mdi:counter" }
+    },
+    "button": {
+      "book_addition": { "default": "mdi:plus-circle" },
+      "book_count": { "default": "mdi:check-circle" },
+      "add_package": { "default": "mdi:package-variant-plus" }
+    },
+    "switch": {
+      "requested": { "default": "mdi:file-document-outline", "state": { "on": "mdi:file-document-check-outline" } }
+    }
+  },
+  "services": {
+    "add_stock": { "service": "mdi:plus-box-outline" },
+    "set_stock": { "service": "mdi:counter" },
+    "set_requested": { "service": "mdi:file-document-check-outline" },
+    "send_reminder": { "service": "mdi:bell-ring-outline" }
+  }
+}
