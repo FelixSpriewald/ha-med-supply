@@ -1,58 +1,7 @@
-# Dashboard card for one medication — core cards only, no HACS frontend needed.
-# Replace "pille_a" with your medication's entity prefix (see Settings → Devices).
-# Entity IDs below are what HA generates with the UI language set to German.
-type: vertical-stack
-cards:
-  - type: markdown
-    content: |
-      {%- set p = 'pille_a' -%}
-      {%- set status = states('sensor.' ~ p ~ '_status') -%}
-      {%- set empty = states('sensor.' ~ p ~ '_leer_am') -%}
-      {%- set due = states('sensor.' ~ p ~ '_rezept_bis') -%}
-      ### 💊 {{ device_attr(device_id('sensor.' ~ p ~ '_vorrat'), 'name') }}
+# The integration ships its own card and loads it automatically.
+# All medications:
+type: custom:med-supply-card
 
-      **{{ states('sensor.' ~ p ~ '_vorrat') | float(0) | round(1) | string | replace('.0', '') | replace('.', ',') }} Tbl.** à {{ state_attr('sensor.' ~ p ~ '_vorrat', 'strength_mg') | string | replace('.0', '') | replace('.', ',') }} mg · noch **{{ states('sensor.' ~ p ~ '_reichweite') }} Tage**
-      {%- if empty not in ['unknown', 'unavailable'] %} · leer am {{ as_datetime(empty).strftime('%d.%m.') }}{% endif %}
-
-      {{ state_attr('sensor.' ~ p ~ '_tagesdosis', 'plan') }}
-
-      {% set has_due = due not in ['unknown', 'unavailable'] -%}
-      {% set due_txt = as_datetime(due).strftime('%d.%m.') if has_due else '' -%}
-      {% set due_future = has_due and as_datetime(due).date() > now().date() -%}
-      {% if status == 'due' %}
-      <ha-alert alert-type="warning">Rezept fällig – {{ 'bis ' ~ due_txt ~ ' besorgen' if due_future else 'jetzt besorgen' }}.</ha-alert>
-      {% elif status == 'requested' %}
-      <ha-alert alert-type="info">Rezept angefragt – Packung abholen und unten buchen.</ha-alert>
-      {% elif status == 'empty' %}
-      <ha-alert alert-type="error">Vorrat leer!</ha-alert>
-      {% else %}
-      <ha-alert alert-type="success">Vorrat reicht. Rezept erst ab {{ due_txt }} nötig.</ha-alert>
-      {% endif %}
-  - type: gauge
-    entity: sensor.pille_a_reichweite
-    name: Reichweite
-    min: 0
-    max: 60
-    needle: true
-    severity:
-      green: 15
-      yellow: 4
-      red: 0
-  - type: entities
-    title: Buchen
-    show_header_toggle: false
-    entities:
-      - entity: switch.pille_a_rezept_angefragt
-        name: Rezept angefragt
-      - entity: button.pille_a_1_packung
-        name: Neue Packung
-      - type: divider
-      - entity: number.pille_a_zugang
-        name: Zugang (Tbl.)
-      - entity: button.pille_a_zugang_buchen
-        name: Zugang buchen
-      - type: divider
-      - entity: number.pille_a_gezahlt
-        name: Gezählt (Tbl.)
-      - entity: button.pille_a_zahlung_ubernehmen
-        name: Zählung übernehmen
+# Optional:
+# title: Medikamente
+# device_id: <device id>   # only one medication (Settings → Devices → URL)

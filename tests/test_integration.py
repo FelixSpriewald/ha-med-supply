@@ -270,3 +270,17 @@ async def test_remove_entry(hass: HomeAssistant, setup) -> None:
     assert await hass.config_entries.async_remove(entry.entry_id)
     await hass.async_block_till_done()
     assert not hass.config_entries.async_entries(DOMAIN)
+
+
+async def test_card_is_served_and_registered(hass: HomeAssistant, hass_client) -> None:
+    from unittest.mock import patch
+
+    from homeassistant.setup import async_setup_component
+
+    with patch("homeassistant.components.frontend.add_extra_js_url") as add_js:
+        assert await async_setup_component(hass, DOMAIN, {})
+    assert add_js.call_args[0][1].startswith("/med_supply/med-supply-card.js?v=")
+    client = await hass_client()
+    resp = await client.get("/med_supply/med-supply-card.js")
+    assert resp.status == 200
+    assert 'customElements.define("med-supply-card"' in await resp.text()

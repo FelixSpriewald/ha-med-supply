@@ -61,8 +61,19 @@ Manuell: `custom_components/med_supply/` nach `/config/custom_components/` kopie
 
 ## Dashboard
 
-[`dashboard/card.yaml`](dashboard/card.yaml) — nur Core-Karten (Markdown, Gauge, Entities).
-Präfix `pille_a` durch das eigene ersetzen.
+Die Integration bringt eine eigene Karte mit und lädt sie automatisch, eine Ressource muss
+nicht eingetragen werden. Im Dashboard: *Karte hinzufügen* → „Medikamentenvorrat" oder
+
+```yaml
+type: custom:med-supply-card
+```
+
+Ohne Konfiguration zeigt sie alle Medikamente. Optional `title` und `device_id`.
+Sie zeigt Reichweite als Balken mit Vorlauf-Markierung, Status, Leer-Datum, den Einnahmeplan
+mit Tabletten-Symbolen und Buttons für *+ Packung*, *Zugang…*, *Gezählt…* und *Rezept angefragt*.
+
+Lokale Vorschau mit Beispieldaten: `python3 -m http.server` im Repo, dann
+`http://localhost:8000/dev/preview.html`.
 
 ## Entwicklung
 

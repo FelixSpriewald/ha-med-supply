@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import logging
+from pathlib import Path
+
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.const import Platform
 from homeassistant.core import Event, HomeAssistant, ServiceCall, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.typing import ConfigType
+from homeassistant.loader import async_get_integration
 
 from ._schema import vol
 from .const import (
@@ -26,6 +30,8 @@ from .const import (
 )
 from .supply import MedSupply
 
+_LOGGER = logging.getLogger(__name__)
+
 PLATFORMS = [Platform.BUTTON, Platform.NUMBER, Platform.SENSOR, Platform.SWITCH]
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
@@ -36,8 +42,30 @@ _ENTRY = {vol.Required(ATTR_CONFIG_ENTRY_ID): cv.string}
 _POSITIVE = vol.All(vol.Coerce(float), vol.Range(min=0))
 
 
+CARD_URL = f"/{DOMAIN}/med-supply-card.js"
+CARD_PATH = Path(__file__).parent / "frontend" / "med-supply-card.js"
+
+
+async def _async_register_card(hass: HomeAssistant) -> None:
+    """Serve the dashboard card and load it in every frontend session."""
+    if hass.http is None:  # e.g. in tests without http
+        return
+    from homeassistant.components.frontend import add_extra_js_url
+    from homeassistant.components.http import StaticPathConfig
+
+    await hass.http.async_register_static_paths(
+        [StaticPathConfig(CARD_URL, str(CARD_PATH), cache_headers=False)]
+    )
+    integration = await async_get_integration(hass, DOMAIN)
+    try:
+        add_extra_js_url(hass, f"{CARD_URL}?v={integration.version}")
+    except KeyError:  # frontend not loaded
+        _LOGGER.warning("Frontend not loaded, med-supply-card not registered")
+
+
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Register services and the notification action listener (once)."""
+    """Register services, the dashboard card and the notification action listener (once)."""
+    await _async_register_card(hass)
 
     def _supply(call: ServiceCall) -> MedSupply:
         entry = hass.config_entries.async_get_entry(call.data[ATTR_CONFIG_ENTRY_ID])

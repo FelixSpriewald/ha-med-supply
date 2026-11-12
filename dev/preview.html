@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>med-supply-card Vorschau</title>
+<style>
+  :root {
+    --primary-color: #03a9f4; --primary-text-color: #212121; --secondary-text-color: #727272;
+    --card-background-color: #fff; --divider-color: #e0e0e0; --text-primary-color: #fff;
+    --success-color: #43a047; --warning-color: #ffa600; --error-color: #db4437; --info-color: #039be5;
+    color-scheme: light;
+  }
+  :root[data-theme="dark"] {
+    --primary-text-color: #e1e1e1; --secondary-text-color: #9b9b9b;
+    --card-background-color: #1c1c1c; --divider-color: rgba(225,225,225,.12);
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --primary-text-color: #e1e1e1; --secondary-text-color: #9b9b9b;
+      --card-background-color: #1c1c1c; --divider-color: rgba(225,225,225,.12);
+      color-scheme: dark;
+    }
+  }
+  body { margin: 0; padding: 24px 16px; background: var(--primary-background-color, #fafafa); font-family: Roboto, system-ui, sans-serif; }
+  :root[data-theme="dark"] body { background: #111; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) body { background: #111; } }
+  .wrap { max-width: 520px; margin: 0 auto; display: grid; gap: 16px; }
+  .bar { display: flex; gap: 8px; justify-content: flex-end; }
+  .bar button { font: inherit; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--divider-color); background: var(--card-background-color); color: var(--primary-text-color); cursor: pointer; }
+  #log { font: 12px ui-monospace, monospace; color: var(--secondary-text-color); white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar">
+    <button onclick="document.documentElement.dataset.theme='light'">Hell</button>
+    <button onclick="document.documentElement.dataset.theme='dark'">Dunkel</button>
+  </div>
+  <med-supply-card id="card"></med-supply-card>
+  <div id="log"></div>
+</div>
+<script src="../custom_components/med_supply/frontend/med-supply-card.js"></script>
+<script>
+  // Fake hass object with two medications: one due, one sufficient (half tablets).
+  const iso = (d) => d.toISOString().slice(0, 10);
+  const plus = (days) => { const d = new Date(); d.setDate(d.getDate() + days); return d; };
+  const at = (days, h) => { const d = plus(days); d.setHours(h, 0, 0, 0); return d.toISOString(); };
+
+  const meds = [
+    { dev: "d1", slug: "medikament_a", name: "Medikament A", tablets: 31, strength: 5, pack: 50, days: 8, lead: 14,
+      status: "due", requested: false, dose: 20,
+      slots: { morning: { time: "08:00", dose_mg: 10, tablets: 2 }, evening: { time: "20:00", dose_mg: 10, tablets: 2 } } },
+    { dev: "d2", slug: "medikament_b", name: "Medikament B", tablets: 42.5, strength: 10, pack: 100, days: 85, lead: 14,
+      status: "ok", requested: false, dose: 5,
+      slots: { morning: { time: "08:00", dose_mg: 5, tablets: 0.5 } } },
+  ];
+
+  const states = {}, entities = {}, devices = {};
+  const add = (domain, m, key, state, attributes = {}) => {
+    const id = `${domain}.${m.slug}_${key}`;
+    states[id] = { entity_id: id, state: String(state), attributes, last_updated: "x" };
+    entities[id] = { entity_id: id, device_id: m.dev, platform: "med_supply", translation_key: key };
+  };
+  for (const m of meds) {
+    devices[m.dev] = { id: m.dev, name: m.name };
+    add("sensor", m, "stock", m.tablets, { stock_mg: m.tablets * m.strength, strength_mg: m.strength, package_size: m.pack });
+    add("sensor", m, "days_left", m.days, { lead_days: m.lead });
+    add("sensor", m, "empty_on", iso(plus(m.days)));
+    add("sensor", m, "prescription_due", iso(plus(m.days - m.lead)));
+    add("sensor", m, "status", m.status);
+    add("sensor", m, "daily_dose", m.dose, { plan: "", ...m.slots });
+    add("sensor", m, "next_intake", at(new Date().getHours() < 20 ? 0 : 1, 20));
+    add("switch", m, "requested", m.requested ? "on" : "off");
+    add("number", m, "addition", m.pack);
+    add("number", m, "counted", "unknown");
+    add("button", m, "book_addition", "unknown");
+    add("button", m, "book_count", "unknown");
+    add("button", m, "add_package", "unknown");
+  }
+
+  const log = (msg) => { document.getElementById("log").textContent = msg + "\n" + document.getElementById("log").textContent; };
+  const card = document.getElementById("card");
+  const hass = {
+    states, entities, devices,
+    callService: async (domain, service, data) => {
+      log(`${domain}.${service} ${JSON.stringify(data)}`);
+      if (domain === "switch") {
+        const s = states[data.entity_id];
+        const on = s.state !== "on";
+        const m = meds.find((x) => data.entity_id.includes(x.slug));
+        states[data.entity_id] = { ...s, state: on ? "on" : "off", last_updated: Date.now() };
+        const sid = `sensor.${m.slug}_status`;
+        states[sid] = { ...states[sid], state: on ? "requested" : m.status, last_updated: Date.now() };
+        card.hass = { ...hass, states: { ...states } };
+      }
+    },
+  };
+  card.addEventListener("hass-notification", (e) => log("Toast: " + e.detail.message));
+  card.setConfig({});
+  card.hass = hass;
+</script>
+</body>
+</html>
