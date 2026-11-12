@@ -52,10 +52,18 @@ def test_projection_exact_supply_runs_out_after_last_dose():
 
 
 def test_projection_partial_dose_counts_as_empty():
-    # 5 mg left, next dose is 10 mg → empty at the next intake.
+    # 5 mg left, next dose is 10 mg → empty now.
     p = calc.project(5.0, PLAN, at(12, 7), TZ)
-    assert p.empty_at == at(12, 8)
+    assert p.empty_at == at(12, 7)
     assert p.days_left == 0
+
+
+def test_projection_nothing_left_is_empty_today_even_if_next_intake_is_tomorrow():
+    morning_only = [Slot("morning", time(8, 0), 10.0)]
+    p = calc.project(0.0, morning_only, at(12, 15), TZ)
+    assert p.empty_at == at(12, 15)
+    assert p.days_left == 0
+    assert calc.status(p.days_left, 14, False) == calc.STATUS_EMPTY
 
 
 def test_projection_without_plan():

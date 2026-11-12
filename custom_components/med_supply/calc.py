@@ -96,10 +96,15 @@ def project(
         return Projection(empty_at=None, days_left=None)
     remaining = stock_mg
     today = now.astimezone(tz).date()
+    first = True
     for at, slot in iter_intakes(slots, now, tz):
         if remaining + EPSILON < slot.dose_mg:
+            if first:
+                # Not even the next intake is covered: empty right now.
+                return Projection(empty_at=now.astimezone(tz), days_left=0)
             return Projection(empty_at=at, days_left=(at.date() - today).days)
         remaining -= slot.dose_mg
+        first = False
     return Projection(empty_at=None, days_left=None)
 
 
