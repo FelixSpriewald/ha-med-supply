@@ -50,16 +50,16 @@
   const at = (days, h) => { const d = plus(days); d.setHours(h, 0, 0, 0); return d.toISOString(); };
 
   const meds = [
-    { dev: "d1", slug: "medikament_a", name: "Medikament A", tablets: 31, strength: 5, pack: 50, days: 8, lead: 14,
+    { dev: "d1", slug: "medikament_a", name: "Medikament A", tablets: 31, strength: 5, pack: 50, days: 8, lead: 10,
       status: "due", requested: false, dose: 20,
       slots: { morning: { time: "08:00", dose_mg: 10, tablets: 2 }, evening: { time: "20:00", dose_mg: 10, tablets: 2 } } },
-    { dev: "d2", slug: "medikament_b", name: "Medikament B", tablets: 42.5, strength: 10, pack: 100, days: 85, lead: 14,
+    { dev: "d2", slug: "medikament_b", name: "Medikament B", tablets: 42.5, strength: 10, pack: 100, days: 85, lead: 10,
       status: "ok", requested: false, dose: 5,
       slots: { morning: { time: "08:00", dose_mg: 5, tablets: 0.5 } } },
-    { dev: "d3", slug: "medikament_c", name: "Medikament C", tablets: 36, strength: 5, pack: 50, days: 33, lead: 14,
+    { dev: "d3", slug: "medikament_c", name: "Medikament C", tablets: 36, strength: 5, pack: 50, days: 33, lead: 10,
       status: "ok", requested: false, dose: 10, lots: [{ strength_mg: 5, tablets: 6 }, { strength_mg: 10, tablets: 30 }], booking: 10,
       slots: { morning: { time: "08:00", dose_mg: 10, tablets: 2 } } },
-    { dev: "d4", slug: "medikament_d", name: "Medikament D", tablets: 12, strength: 1000, pack: 100, days: 6, lead: 14,
+    { dev: "d4", slug: "medikament_d", name: "Medikament D", tablets: 12, strength: 1000, pack: 100, days: 6, lead: 10,
       status: "requested", requested: true, dose: 2000,
       slots: { morning: { time: "08:00", dose_mg: 1000, tablets: 1 }, evening: { time: "20:00", dose_mg: 1000, tablets: 1 } } },
   ];

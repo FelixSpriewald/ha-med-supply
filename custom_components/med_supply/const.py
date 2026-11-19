@@ -47,7 +47,7 @@ def slot_dose_key(slot: str) -> str:
     return f"{slot}_dose_mg"
 
 
-DEFAULT_LEAD_DAYS: Final = 14
+DEFAULT_LEAD_DAYS: Final = 10
 DEFAULT_REMINDER_TIME: Final = "09:00:00"
 PICKUP_WARNING_DAYS: Final = 3
 SNOOZE_HOURS: Final = 3

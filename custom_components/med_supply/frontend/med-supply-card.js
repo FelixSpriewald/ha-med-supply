@@ -176,7 +176,7 @@ class MedSupplyCard extends HTMLElement {
       lots.length > 1
         ? lots.map((l) => `<div class="nowrap"><b>${fmtNum(l.tablets, 1)}</b> Tbl. à ${fmtNum(l.strength_mg)} mg</div>`).join("")
         : `<div class="nowrap"><b>${fmtNum(tablets, 1)}</b> Tbl. à ${fmtNum(strength)} mg</div>`;
-    const lead = Number(days.attributes.lead_days ?? 14);
+    const lead = Number(days.attributes.lead_days ?? 10);
     const daysLeft = days.state === "unknown" ? null : Number(days.state);
     const emptyOn = parseDate(this._st(e.empty_on)?.state);
     const due = parseDate(this._st(e.prescription_due)?.state);
