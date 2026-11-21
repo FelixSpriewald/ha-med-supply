@@ -19,6 +19,7 @@ from .const import (
     ACTION_REQUESTED,
     ACTION_SNOOZE,
     CONF_INITIAL_TABLETS,
+    CONF_INTAKE_REMINDER,
     CONF_LEAD_DAYS,
     CONF_NAME,
     CONF_NOTIFY_SERVICE,
@@ -135,6 +136,10 @@ class MedSupply:
     @property
     def notify_service(self) -> str | None:
         return self._reminder.get(CONF_NOTIFY_SERVICE) or None
+
+    @property
+    def intake_reminder(self) -> bool:
+        return bool(self._reminder.get(CONF_INTAKE_REMINDER, True))
 
     @property
     def show_name(self) -> bool:

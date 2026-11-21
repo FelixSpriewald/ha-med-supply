@@ -21,6 +21,7 @@ CONF_LEAD_DAYS: Final = "lead_days"
 CONF_REMINDER_TIME: Final = "reminder_time"
 CONF_NOTIFY_SERVICE: Final = "notify_service"
 CONF_SHOW_NAME: Final = "show_name"
+CONF_INTAKE_REMINDER: Final = "intake_reminder"
 
 SLOT_KEYS: Final = ("morning", "noon", "evening", "night")
 SLOT_DEFAULT_TIMES: Final = {

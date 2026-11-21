@@ -29,6 +29,7 @@ from . import calc
 from ._schema import vol
 from .const import (
     CONF_INITIAL_TABLETS,
+    CONF_INTAKE_REMINDER,
     CONF_LEAD_DAYS,
     CONF_NAME,
     CONF_NOTIFY_SERVICE,
@@ -88,6 +89,7 @@ def _settings_schema(hass: HomeAssistant) -> dict[Any, Any]:
                     vol.Required(CONF_LEAD_DAYS, default=DEFAULT_LEAD_DAYS): DAYS,
                     vol.Required(CONF_REMINDER_TIME, default=DEFAULT_REMINDER_TIME): TimeSelector(),
                     vol.Optional(CONF_NOTIFY_SERVICE): _notify_selector(hass),
+                    vol.Required(CONF_INTAKE_REMINDER, default=True): BooleanSelector(),
                     vol.Required(CONF_SHOW_NAME, default=False): BooleanSelector(),
                 }
             )

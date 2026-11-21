@@ -41,6 +41,7 @@ USER_INPUT = {
         "lead_days": 14,
         "reminder_time": "09:00:00",
         "notify_service": "mobile_app_iphone",
+        "intake_reminder": False,
         "show_name": False,
     },
 }
@@ -354,3 +355,61 @@ async def test_migrates_single_strength_storage(
     stock = state(hass, entry, "sensor", "stock")
     assert float(stock.state) == 20
     assert stock.attributes["lots"] == [{"strength_mg": 5, "tablets": 20}]
+
+
+async def _add_med(hass: HomeAssistant, **changes):
+    data = {**USER_INPUT, **changes}
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], data)
+    assert result["type"] is FlowResultType.CREATE_ENTRY, result
+    await hass.async_block_till_done()
+    return hass.config_entries.async_get_entry(result["result"].entry_id)
+
+
+async def test_intake_reminder_bundles_meds(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+) -> None:
+    await hass.config.async_set_time_zone("Europe/Berlin")
+    freezer.move_to(START)
+    notify_calls = async_mock_service(hass, "notify", "mobile_app_iphone")
+    reminder = {**USER_INPUT["reminder"], "intake_reminder": True, "show_name": True}
+    reminder["reminder_time"] = "09:30:00"  # keep the prescription push out of the way
+    await _add_med(hass, name="Pille A", reminder=reminder)
+    await _add_med(
+        hass,
+        name="Pille B",
+        strength_mg=10,
+        plan={**USER_INPUT["plan"], "evening_dose_mg": 0},
+        reminder=reminder,
+    )
+    await _add_med(hass, name="Pille C", reminder={**reminder, "intake_reminder": False})
+
+    await tick(hass, freezer, START.replace(hour=20))
+    intake = [c for c in notify_calls if c.data.get("title", "").startswith("Tabletten")]
+    assert len(intake) == 1
+    assert intake[0].data["title"] == "Tabletten nehmen (abends)"
+    assert intake[0].data["message"] == "Pille A: 2× 5 mg"
+
+    await tick(hass, freezer, START.replace(hour=8) + timedelta(days=1))
+    intake = [c for c in notify_calls if c.data.get("title", "").startswith("Tabletten")]
+    assert len(intake) == 2
+    assert intake[1].data["message"] == "Pille A: 2× 5 mg\nPille B: 1× 10 mg"
+    assert intake[1].data["data"]["tag"] == "med_supply_intake"
+
+
+async def test_intake_reminder_hides_names(
+    hass: HomeAssistant, freezer: FrozenDateTimeFactory
+) -> None:
+    await hass.config.async_set_time_zone("Europe/Berlin")
+    freezer.move_to(START)
+    notify_calls = async_mock_service(hass, "notify", "mobile_app_iphone")
+    reminder = {**USER_INPUT["reminder"], "intake_reminder": True, "reminder_time": "09:30:00"}
+    entry = await _add_med(hass, reminder=reminder)
+    await tick(hass, freezer, START.replace(hour=20))
+    assert notify_calls[-1].data["message"] == "Zeit für deine Tabletten."
+
+    # Unloading the entry stops its reminders
+    await hass.config_entries.async_unload(entry.entry_id)
+    count = len(notify_calls)
+    await tick(hass, freezer, START.replace(hour=8) + timedelta(days=1))
+    assert len(notify_calls) == count

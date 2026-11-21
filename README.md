@@ -47,6 +47,10 @@ Täglich zur eingestellten Uhrzeit an das gewählte Companion-App-Gerät:
   Buttons im Push: *Rezept angefragt*, *In 3 h erinnern*.
 - **Packung abholen** – wenn angefragt, aber nur noch ≤ 3 Tage Reichweite.
 
+- **Tabletten nehmen** – zu jeder Einnahmezeit aus dem Plan (nur Zeitpunkte mit Dosis), z. B.
+  „Pille A: 2× 5 mg". Medikamente mit derselben Uhrzeit und demselben Gerät kommen in eine Push.
+  Reine Erinnerung, kein Abhaken. Pro Medikament abschaltbar (Option „Einnahme-Erinnerung").
+
 Ohne die Option „Name im Push zeigen" steht nur „Ein Medikament …" im Text (Sperrbildschirm).
 
 Aktionen: `med_supply.add_stock`, `med_supply.set_stock`, `med_supply.set_requested`,

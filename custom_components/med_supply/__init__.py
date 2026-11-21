@@ -28,6 +28,7 @@ from .const import (
     SERVICE_SET_REQUESTED,
     SERVICE_SET_STOCK,
 )
+from .intake import IntakeReminders
 from .supply import MedSupply
 
 _LOGGER = logging.getLogger(__name__)
@@ -66,6 +67,7 @@ async def _async_register_card(hass: HomeAssistant) -> None:
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Register services, the dashboard card and the notification action listener (once)."""
     await _async_register_card(hass)
+    hass.data[DOMAIN] = IntakeReminders(hass)
 
     def _supply(call: ServiceCall) -> MedSupply:
         entry = hass.config_entries.async_get_entry(call.data[ATTR_CONFIG_ENTRY_ID])
@@ -157,6 +159,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: MedSupplyConfigEntry) ->
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     supply.async_start()
     entry.async_on_unload(supply.async_stop)
+    intake: IntakeReminders = hass.data[DOMAIN]
+    entry.async_on_unload(intake.async_register(supply))
     entry.async_on_unload(entry.add_update_listener(_async_reload))
     return True
 

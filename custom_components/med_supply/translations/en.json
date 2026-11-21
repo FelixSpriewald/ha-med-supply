@@ -36,11 +36,13 @@
               "lead_days": "Lead time",
               "reminder_time": "Reminder time",
               "notify_service": "Push to",
+              "intake_reminder": "Intake reminder",
               "show_name": "Show medication name in push"
             },
             "data_description": {
               "lead_days": "Prescription is due when the supply lasts this many days or less.",
               "notify_service": "Companion app device. Empty = no push.",
+              "intake_reminder": "Push at every intake time of the plan. Medications due at the same time share one push.",
               "show_name": "Off: the push only says \"A medication …\" (lock screen)."
             }
           }
@@ -219,11 +221,13 @@
               "lead_days": "Lead time",
               "reminder_time": "Reminder time",
               "notify_service": "Push to",
+              "intake_reminder": "Intake reminder",
               "show_name": "Show medication name in push"
             },
             "data_description": {
               "lead_days": "Prescription is due when the supply lasts this many days or less.",
               "notify_service": "Companion app device. Empty = no push.",
+              "intake_reminder": "Push at every intake time of the plan. Medications due at the same time share one push.",
               "show_name": "Off: the push only says \"A medication …\" (lock screen)."
             }
           }

@@ -36,11 +36,13 @@
               "lead_days": "Vorlaufzeit",
               "reminder_time": "Uhrzeit der Erinnerung",
               "notify_service": "Push an",
+              "intake_reminder": "Einnahme-Erinnerung",
               "show_name": "Medikamentenname im Push zeigen"
             },
             "data_description": {
               "lead_days": "Ab so vielen Tagen Restreichweite gilt das Rezept als fällig.",
               "notify_service": "Companion-App-Gerät. Leer = keine Pushs.",
+              "intake_reminder": "Push zu jeder Einnahmezeit aus dem Plan. Mehrere Medikamente zur selben Zeit kommen in eine Push.",
               "show_name": "Aus: Der Push sagt nur „Ein Medikament …“ (Sperrbildschirm)."
             }
           }
@@ -88,11 +90,13 @@
               "lead_days": "Vorlaufzeit",
               "reminder_time": "Uhrzeit der Erinnerung",
               "notify_service": "Push an",
+              "intake_reminder": "Einnahme-Erinnerung",
               "show_name": "Medikamentenname im Push zeigen"
             },
             "data_description": {
               "lead_days": "Ab so vielen Tagen Restreichweite gilt das Rezept als fällig.",
               "notify_service": "Companion-App-Gerät. Leer = keine Pushs.",
+              "intake_reminder": "Push zu jeder Einnahmezeit aus dem Plan. Mehrere Medikamente zur selben Zeit kommen in eine Push.",
               "show_name": "Aus: Der Push sagt nur „Ein Medikament …“ (Sperrbildschirm)."
             }
           }
